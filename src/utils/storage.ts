@@ -22,6 +22,21 @@ export const DEFAULT_COMPANY: CompanyProfile = {
 
 export const INITIAL_PARTIES: Party[] = [
   {
+    id: 'pty-gt',
+    name: 'GT Multimedia',
+    contactPerson: 'Account Manager',
+    email: 'gtmultimedia@example.com',
+    phone: '+91 98201 55667',
+    gstin: '27AHVPT4833C1ZW',
+    state: 'Maharashtra',
+    stateCode: '27',
+    address: 'C-1, GF, Blog No.3, Ramratin Soc. Ltd, Ramdev Park, Mira Road-East',
+    city: 'Mira Road, Thane',
+    pincode: '401105',
+    partyType: 'CUSTOMER',
+    defaultSite: 'Mathura, Nashik, Manmaad, Agra Cantt',
+  },
+  {
     id: 'pty-1',
     name: 'Vertex Engineering Works',
     contactPerson: 'Rajesh Sharma',
@@ -99,6 +114,61 @@ export const INITIAL_PARTIES: Party[] = [
 ];
 
 export const INITIAL_INVOICES: Invoice[] = [
+  {
+    id: 'inv-gt-012',
+    invoiceNumber: '012/2026-27',
+    invoiceDate: '2026-05-26',
+    dueDate: '2026-06-10',
+    partyId: 'pty-gt',
+    partyName: 'GT Multimedia',
+    partyGstin: '27AHVPT4833C1ZW',
+    partyState: 'Maharashtra',
+    partyStateCode: '27',
+    partyAddress: 'C-1, GF, Blog No.3, Ramratin Soc. Ltd, Ramdev Park, Mira Road-East Maharastra -401105',
+    site: 'Mathura, Nashik, Manmaad, Agra Cantt',
+    supplyState: 'Maharashtra',
+    supplyStateCode: '27',
+    gstType: 'INTRA',
+    paymentTerms: 'Immediate',
+    items: [
+      {
+        id: 'itm-gt-1',
+        site: 'Mathura, Nashik, Manmaad, Agra Cantt',
+        party: 'GT Multimedia',
+        description: 'GT Multimedia, LIC Site : Mathura, Nashik, Manmaad, Agra Cantt (Brand : LIC) (FROM 01/04/2026 to 30/04/2026)',
+        hsnSac: '998361',
+        quantity: 4,
+        unit: 'Sites',
+        rate: 162250,
+        taxRate: 18,
+        taxableAmount: 649000,
+        cgstRate: 9,
+        cgstAmount: 58410,
+        sgstRate: 9,
+        sgstAmount: 58410,
+        igstRate: 0,
+        igstAmount: 0,
+        totalTax: 116820,
+        totalAmount: 765820,
+        isTotalCustomized: false,
+      },
+    ],
+    subtotal: 649000,
+    totalCgst: 58410,
+    totalSgst: 58410,
+    totalIgst: 0,
+    totalTax: 116820,
+    roundOff: 0,
+    grandTotal: 765820,
+    amountPaid: 765820,
+    balanceDue: 0,
+    paymentStatus: 'PAID',
+    paymentMode: 'BANK_TRANSFER',
+    notes: 'Add: SGST@9%: 58,410.00 | Add: CGST@9%: 58,410.00 | Bank: ICICI Bank A/C: 284105001064',
+    isRecurring: false,
+    createdAt: '2026-05-26T10:00:00Z',
+    updatedAt: '2026-05-26T10:00:00Z',
+  },
   {
     id: 'inv-101',
     invoiceNumber: 'INV-2026-001',
@@ -717,7 +787,16 @@ export function saveCompany(profile: CompanyProfile): void {
 export function loadParties(): Party[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.PARTIES);
-    return data ? JSON.parse(data) : INITIAL_PARTIES;
+    if (data) {
+      const parsed: Party[] = JSON.parse(data);
+      if (!parsed.some((p) => p.id === 'pty-gt')) {
+        const merged = [INITIAL_PARTIES[0], ...parsed];
+        saveParties(merged);
+        return merged;
+      }
+      return parsed;
+    }
+    return INITIAL_PARTIES;
   } catch {
     return INITIAL_PARTIES;
   }
@@ -730,7 +809,16 @@ export function saveParties(parties: Party[]): void {
 export function loadInvoices(): Invoice[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.INVOICES);
-    return data ? JSON.parse(data) : INITIAL_INVOICES;
+    if (data) {
+      const parsed: Invoice[] = JSON.parse(data);
+      if (!parsed.some((i) => i.id === 'inv-gt-012')) {
+        const merged = [INITIAL_INVOICES[0], ...parsed];
+        saveInvoices(merged);
+        return merged;
+      }
+      return parsed;
+    }
+    return INITIAL_INVOICES;
   } catch {
     return INITIAL_INVOICES;
   }

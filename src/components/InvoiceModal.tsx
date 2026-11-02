@@ -212,6 +212,28 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     );
   };
 
+  // Direct toggle between Intrastate (18%), Interstate (9% SGST + 9% CGST), and IGST (18%)
+  const handleGstTypeToggle = (newGstType: GSTType, forcedCategory?: 'SGST_CGST' | 'IGST' | 'AUTO') => {
+    setGstType(newGstType);
+    setItems((prev) =>
+      prev.map((item) => {
+        const cat = forcedCategory || (newGstType === 'INTER' ? 'SGST_CGST' : 'AUTO');
+        const taxes = calculateLineItemTaxes(
+          item.quantity,
+          item.rate,
+          item.taxRate,
+          newGstType,
+          item.isTotalCustomized ? item.totalAmount : undefined,
+          cat
+        );
+        return {
+          ...item,
+          ...taxes,
+        };
+      })
+    );
+  };
+
   // Add line item
   const handleAddItem = () => {
     const taxes = calculateLineItemTaxes(1, 1000, 18, gstType);
@@ -236,6 +258,47 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
+  // Change tax option with explicit IGST 18% or SGST 9% + CGST 9%
+  const handleTaxOptionChange = (id: string, compositeValue: string) => {
+    let newCategory: 'SGST_CGST' | 'IGST' | 'AUTO' = 'AUTO';
+    let newRate = 18;
+
+    if (compositeValue === 'IGST_18') {
+      newCategory = 'IGST';
+      newRate = 18;
+    } else if (compositeValue === 'SGST_CGST_18') {
+      newCategory = 'SGST_CGST';
+      newRate = 18;
+    } else if (compositeValue.startsWith('IGST_')) {
+      newCategory = 'IGST';
+      newRate = Number(compositeValue.replace('IGST_', ''));
+    } else if (compositeValue.startsWith('AUTO_')) {
+      newCategory = 'AUTO';
+      newRate = Number(compositeValue.replace('AUTO_', ''));
+    } else {
+      newRate = Number(compositeValue);
+    }
+
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const taxes = calculateLineItemTaxes(
+          item.quantity,
+          item.rate,
+          newRate,
+          gstType,
+          item.isTotalCustomized ? item.totalAmount : undefined,
+          newCategory
+        );
+        return {
+          ...item,
+          taxRate: newRate,
+          ...taxes,
+        };
+      })
+    );
+  };
+
   // Update line item property
   const handleUpdateItem = (
     id: string,
@@ -254,7 +317,9 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             Number(field === 'quantity' ? value : item.quantity),
             Number(field === 'rate' ? value : item.rate),
             Number(field === 'taxRate' ? value : item.taxRate),
-            gstType
+            gstType,
+            undefined,
+            item.taxCategory
           );
           return {
             ...updated,
@@ -271,7 +336,8 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             item.rate,
             item.taxRate,
             gstType,
-            customTotal
+            customTotal,
+            item.taxCategory
           );
           return {
             ...updated,
@@ -358,14 +424,44 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             <h2 className="text-lg font-bold text-slate-900">
               {existingInvoice ? `Edit Invoice: ${existingInvoice.invoiceNumber}` : 'Create GST Tax Invoice'}
             </h2>
-            <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
               <span>GSTIN: {company.gstin}</span>
               <span>·</span>
-              <span className="font-semibold text-indigo-700">
-                {gstType === 'INTRA'
-                  ? 'Intrastate Transaction (CGST + SGST)'
-                  : 'Interstate Transaction (IGST Only)'}
-              </span>
+              <div className="inline-flex items-center p-0.5 bg-slate-200/80 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => handleGstTypeToggle('INTRA')}
+                  className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition-colors cursor-pointer ${
+                    gstType === 'INTRA' && items[0]?.taxCategory !== 'IGST'
+                      ? 'bg-white text-indigo-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Intrastate (18%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleGstTypeToggle('INTER', 'SGST_CGST')}
+                  className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition-colors cursor-pointer ${
+                    gstType === 'INTER' && items[0]?.taxCategory !== 'IGST'
+                      ? 'bg-white text-indigo-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Interstate (9% SGST + 9% CGST)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleGstTypeToggle('INTER', 'IGST')}
+                  className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition-colors cursor-pointer ${
+                    items[0]?.taxCategory === 'IGST'
+                      ? 'bg-white text-indigo-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  IGST (18%)
+                </button>
+              </div>
             </div>
           </div>
           <button
@@ -579,7 +675,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Row 2: Qty, Unit, Rate, Tax Rate (%), Taxable, CGST/SGST/IGST, Total Amount */}
+                  {/* Row 2: Qty, Unit, Rate, Tax Rate (%), Taxable, Tax Amount, Total Amount */}
                   <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 items-end pt-1 border-t border-slate-200/60">
                     <div className="sm:col-span-2">
                       <label className="block text-[10px] text-slate-500 font-medium">Quantity</label>
@@ -608,6 +704,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                         <option value="nos">nos</option>
                         <option value="job">job</option>
                         <option value="pkg">pkg</option>
+                        <option value="Sites">Sites</option>
                       </select>
                     </div>
 
@@ -623,33 +720,45 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                       />
                     </div>
 
-                    <div className="sm:col-span-1">
-                      <label className="block text-[10px] text-slate-500 font-medium">GST %</label>
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-bold text-indigo-700 whitespace-nowrap">
+                        {item.taxCategory === 'IGST'
+                          ? 'IGST 18%'
+                          : (item.taxCategory === 'SGST_CGST'
+                              ? '9% SGST + 9% CGST'
+                              : '9% SGST + 9% CGST / IGST 18%')}
+                      </label>
                       <select
-                        value={item.taxRate}
-                        onChange={(e) => handleUpdateItem(item.id, 'taxRate', Number(e.target.value))}
-                        className="w-full px-1 py-1 font-mono bg-white border border-slate-300 rounded-md text-xs"
+                        value={
+                          item.taxCategory === 'IGST'
+                            ? `IGST_${item.taxRate}`
+                            : (item.taxCategory === 'SGST_CGST'
+                                ? `SGST_CGST_${item.taxRate}`
+                                : (item.taxRate === 18 ? (gstType === 'INTER' ? 'SGST_CGST_18' : 'IGST_18') : `AUTO_${item.taxRate}`))
+                        }
+                        onChange={(e) => handleTaxOptionChange(item.id, e.target.value)}
+                        className="w-full px-1.5 py-1 font-mono bg-white border border-slate-300 rounded-md text-xs font-semibold text-slate-900 focus:ring-1 focus:ring-indigo-500"
                       >
-                        {GST_RATES.map((r) => (
-                          <option key={r} value={r}>
-                            {r}%
-                          </option>
-                        ))}
+                        <option value="SGST_CGST_18">9% SGST + 9% CGST (18%)</option>
+                        <option value="IGST_18">IGST 18%</option>
+                        <option value="AUTO_18">18% Standard Tax</option>
+                        <option value="AUTO_12">12% Tax</option>
+                        <option value="AUTO_5">5% Tax</option>
+                        <option value="AUTO_28">28% Tax</option>
+                        <option value="AUTO_0">0% (Exempt)</option>
                       </select>
                     </div>
 
-                    <div className="sm:col-span-2 text-right">
-                      <label className="block text-[10px] text-slate-500 font-medium">Taxable Val</label>
-                      <span className="block py-1 font-mono text-slate-700 font-medium">
+                    <div className="sm:col-span-1 text-right">
+                      <label className="block text-[10px] text-slate-500 font-medium">Taxable</label>
+                      <span className="block py-1 font-mono text-slate-700 font-medium text-xs">
                         {formatINR(item.taxableAmount)}
                       </span>
                     </div>
 
                     <div className="sm:col-span-1 text-right">
-                      <label className="block text-[10px] text-slate-500 font-medium">
-                        {gstType === 'INTRA' ? 'CGST+SGST' : 'IGST'}
-                      </label>
-                      <span className="block py-1 font-mono text-slate-600 text-[11px]">
+                      <label className="block text-[10px] text-slate-500 font-medium">Tax Amt</label>
+                      <span className="block py-1 font-mono text-indigo-700 font-bold text-xs">
                         {formatINR(item.totalTax)}
                       </span>
                     </div>
@@ -658,7 +767,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                     <div className="sm:col-span-2">
                       <div className="flex items-center justify-between">
                         <label className="block text-[10px] font-bold text-indigo-700">
-                          Total (Customizable)
+                          Total Amount
                         </label>
                         {item.isTotalCustomized && (
                           <span className="text-[9px] bg-amber-100 text-amber-800 px-1 rounded font-semibold">
@@ -751,27 +860,28 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             {/* Right: Tax Breakup & Grand Total Box */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-600">
-                <span>Taxable Subtotal:</span>
-                <span className="font-mono text-slate-900">{formatINR(totals.subtotal)}</span>
+                <span>Total Amount (Taxable Subtotal):</span>
+                <span className="font-mono font-bold text-slate-900">{formatINR(totals.subtotal)}</span>
               </div>
 
-              {gstType === 'INTRA' ? (
-                <>
-                  <div className="flex items-center justify-between text-xs text-slate-600">
-                    <span>Central GST (CGST):</span>
-                    <span className="font-mono text-slate-900">{formatINR(totals.totalCgst)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-600">
-                    <span>State GST (SGST):</span>
-                    <span className="font-mono text-slate-900">{formatINR(totals.totalSgst)}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>Integrated GST (IGST):</span>
-                  <span className="font-mono text-slate-900">{formatINR(totals.totalIgst)}</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Add: SGST@9%:</span>
+                <span className="font-mono font-semibold text-slate-900">
+                  {totals.totalSgst > 0 ? formatINR(totals.totalSgst) : '-'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Add: CGST@9%:</span>
+                <span className="font-mono font-semibold text-slate-900">
+                  {totals.totalCgst > 0 ? formatINR(totals.totalCgst) : '-'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Add: IGST@18%:</span>
+                <span className="font-mono font-semibold text-slate-900">
+                  {totals.totalIgst > 0 ? formatINR(totals.totalIgst) : (totals.totalTax > 0 && totals.totalSgst === 0 ? formatINR(totals.totalTax) : '-')}
+                </span>
+              </div>
 
               <div className="flex items-center justify-between text-xs text-slate-600">
                 <span>Total Tax:</span>

@@ -57,7 +57,8 @@ export function calculateLineItemTaxes(
   rate: number,
   taxRate: number,
   gstType: GSTType,
-  customTotalAmount?: number
+  customTotalAmount?: number,
+  taxCategory?: 'SGST_CGST' | 'IGST' | 'AUTO'
 ): {
   taxableAmount: number;
   cgstRate: number;
@@ -69,10 +70,12 @@ export function calculateLineItemTaxes(
   totalTax: number;
   totalAmount: number;
   isTotalCustomized: boolean;
+  taxCategory: 'SGST_CGST' | 'IGST' | 'AUTO';
 } {
   const qty = Number(quantity) || 0;
   const unitRate = Number(rate) || 0;
   const taxPct = Number(taxRate) || 0;
+  const category = taxCategory || (gstType === 'INTER' ? 'SGST_CGST' : 'AUTO');
 
   // If user provided a customized total amount and it differs from natural math
   if (customTotalAmount !== undefined && customTotalAmount !== null && !isNaN(customTotalAmount)) {
@@ -81,7 +84,21 @@ export function calculateLineItemTaxes(
     const taxable = taxPct > 0 ? total / (1 + taxPct / 100) : total;
     const taxAmt = total - taxable;
 
-    if (gstType === 'INTRA') {
+    if (category === 'IGST') {
+      return {
+        taxableAmount: round2(taxable),
+        cgstRate: 0,
+        cgstAmount: 0,
+        sgstRate: 0,
+        sgstAmount: 0,
+        igstRate: taxPct,
+        igstAmount: round2(taxAmt),
+        totalTax: round2(taxAmt),
+        totalAmount: round2(total),
+        isTotalCustomized: true,
+        taxCategory: 'IGST',
+      };
+    } else if (category === 'SGST_CGST' || gstType === 'INTER') {
       const halfRate = taxPct / 2;
       const halfTax = round2(taxAmt / 2);
       return {
@@ -95,6 +112,7 @@ export function calculateLineItemTaxes(
         totalTax: round2(halfTax * 2),
         totalAmount: round2(total),
         isTotalCustomized: true,
+        taxCategory: 'SGST_CGST',
       };
     } else {
       return {
@@ -108,6 +126,7 @@ export function calculateLineItemTaxes(
         totalTax: round2(taxAmt),
         totalAmount: round2(total),
         isTotalCustomized: true,
+        taxCategory: 'AUTO',
       };
     }
   }
@@ -121,14 +140,19 @@ export function calculateLineItemTaxes(
   let igstRate = 0;
   let igstAmount = 0;
 
-  if (gstType === 'INTRA') {
+  if (category === 'IGST') {
+    igstRate = taxPct;
+    igstAmount = round2((taxable * taxPct) / 100);
+  } else if (category === 'SGST_CGST' || gstType === 'INTER') {
+    // In interstate will be 9% SGST AND 9% CGST
     cgstRate = taxPct / 2;
     sgstRate = taxPct / 2;
     cgstAmount = round2((taxable * cgstRate) / 100);
     sgstAmount = round2((taxable * sgstRate) / 100);
   } else {
+    // In intrastate is 18%
     igstRate = taxPct;
-    igstAmount = round2((taxable * igstRate) / 100);
+    igstAmount = round2((taxable * taxPct) / 100);
   }
 
   const totalTax = round2(cgstAmount + sgstAmount + igstAmount);
@@ -145,6 +169,7 @@ export function calculateLineItemTaxes(
     totalTax,
     totalAmount,
     isTotalCustomized: false,
+    taxCategory: category,
   };
 }
 

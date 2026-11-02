@@ -183,28 +183,25 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
             {/* GST Tax Segregation Table */}
             <div className="border border-slate-800 p-2 text-[10px]">
               <p className="font-bold text-slate-900 mb-1">Tax Amount Breakdown (Segregated GST):</p>
-              <div className="grid grid-cols-4 gap-2 font-mono">
+              <div className="grid grid-cols-5 gap-2 font-mono text-[10px]">
                 <div>
                   <span className="text-slate-500">Taxable Value:</span>{' '}
                   <strong className="text-slate-900">{formatINR(invoice.subtotal)}</strong>
                 </div>
-                {invoice.gstType === 'INTRA' ? (
-                  <>
-                    <div>
-                      <span className="text-slate-500">Central Tax (CGST):</span>{' '}
-                      <strong className="text-slate-900">{formatINR(invoice.totalCgst)}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">State Tax (SGST):</span>{' '}
-                      <strong className="text-slate-900">{formatINR(invoice.totalSgst)}</strong>
-                    </div>
-                  </>
-                ) : (
-                  <div className="col-span-2">
-                    <span className="text-slate-500">Integrated Tax (IGST):</span>{' '}
-                    <strong className="text-slate-900">{formatINR(invoice.totalIgst)}</strong>
-                  </div>
-                )}
+                <div>
+                  <span className="text-slate-500">SGST (9%):</span>{' '}
+                  <strong className="text-slate-900">{invoice.totalSgst > 0 ? formatINR(invoice.totalSgst) : '-'}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">CGST (9%):</span>{' '}
+                  <strong className="text-slate-900">{invoice.totalCgst > 0 ? formatINR(invoice.totalCgst) : '-'}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">IGST (18%):</span>{' '}
+                  <strong className="text-slate-900">
+                    {invoice.totalIgst > 0 ? formatINR(invoice.totalIgst) : (invoice.totalTax > 0 && invoice.totalSgst === 0 ? formatINR(invoice.totalTax) : '-')}
+                  </strong>
+                </div>
                 <div className="text-right">
                   <span className="text-slate-500">Total Tax:</span>{' '}
                   <strong className="text-slate-900">{formatINR(invoice.totalTax)}</strong>
@@ -235,26 +232,27 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
 
               <div className="sm:col-span-5 bg-slate-50 border border-slate-300 p-2.5 rounded space-y-1 font-mono text-[11px]">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Taxable Subtotal:</span>
-                  <span>{formatINR(invoice.subtotal)}</span>
+                  <span className="text-slate-700 font-semibold">Total Amount:</span>
+                  <span className="font-bold text-slate-900">{formatINR(invoice.subtotal)}</span>
                 </div>
-                {invoice.gstType === 'INTRA' ? (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">CGST Amount:</span>
-                      <span>{formatINR(invoice.totalCgst)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">SGST Amount:</span>
-                      <span>{formatINR(invoice.totalSgst)}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">IGST Amount:</span>
-                    <span>{formatINR(invoice.totalIgst)}</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Add: SGST@9%:</span>
+                  <span className="font-semibold text-slate-900">
+                    {invoice.totalSgst > 0 ? formatINR(invoice.totalSgst) : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Add: CGST@9%:</span>
+                  <span className="font-semibold text-slate-900">
+                    {invoice.totalCgst > 0 ? formatINR(invoice.totalCgst) : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Add: IGST@18%:</span>
+                  <span className="font-semibold text-slate-900">
+                    {invoice.totalIgst > 0 ? formatINR(invoice.totalIgst) : (invoice.totalTax > 0 && invoice.totalSgst === 0 ? formatINR(invoice.totalTax) : '-')}
+                  </span>
+                </div>
                 {invoice.roundOff !== 0 && (
                   <div className="flex justify-between text-slate-500 text-[10px]">
                     <span>Round Off:</span>
@@ -263,7 +261,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
                 )}
                 <div className="border-t border-slate-800 pt-1 flex justify-between font-bold text-sm text-slate-950">
                   <span>Grand Total:</span>
-                  <span>{formatINR(invoice.grandTotal)}</span>
+                  <span className="text-indigo-900">{formatINR(invoice.grandTotal)}</span>
                 </div>
               </div>
             </div>

@@ -53,6 +53,7 @@ export interface InvoiceLineItem {
   unit: string;
   rate: number;
   taxRate: number; // 0, 5, 12, 18, 28
+  taxCategory?: 'SGST_CGST' | 'IGST' | 'AUTO';
   taxableAmount: number; // quantity * rate
   cgstRate: number;
   cgstAmount: number;
