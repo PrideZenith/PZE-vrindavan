@@ -1,0 +1,6 @@
+{
+  "name": "ZenithBooks - GST Invoicing & Book Record",
+  "description": "Complete GST-compliant invoicing, book record ledger, expense tracking, recurring billing, automated tax calculations, and monthly P&L reporting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
